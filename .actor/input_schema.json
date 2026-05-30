@@ -1,0 +1,17 @@
+{
+    "title": "E-commerce Price Tracker Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "urls": {
+            "title": "Product URLs",
+            "type": "array",
+            "description": "Enter the e-commerce product detail URLs to track (one per line).",
+            "editor": "stringList",
+            "prefill": [
+                "https://example.com"
+            ]
+        }
+    },
+    "required": ["urls"]
+}

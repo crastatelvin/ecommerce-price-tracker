@@ -1,0 +1,9 @@
+{
+    "name": "ecommerce-price-tracker",
+    "version": "1.0.0",
+    "title": "E-commerce Price Tracker",
+    "description": "Scrapes product name, price, and availability from product detail URLs. Supports local scheduling and dashboard controls.",
+    "meta": {
+        "templateId": "project-empty"
+    }
+}
