@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Price Tracker Dashboard</title>
+    <meta name="description" content="Track product names, prices, and availability from multiple e-commerce websites with schedules and data exports in JSON, CSV, and Excel.">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header animate-fade-in">
+            <div class="logo-area">
+                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                </svg>
+                <h1 id="main-title">E-commerce Price Tracker</h1>
+            </div>
+            <p class="subtitle">Scrape product details, automate tracking schedules, and analyze stock in real-time</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Side: Controls -->
+            <section class="card control-card animate-fade-in delay-1">
+                <h2>Tracker Configuration</h2>
+                
+                <div class="input-group">
+                    <label for="url-inputs">Product & Category Store URLs (one per line)</label>
+                    <textarea id="url-inputs" placeholder="https://example-shop.com/product/laptop-xyz&#10;https://another-store.com/collections/all" rows="6"></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Scheduling Frequencies</label>
+                    <div class="segmented-control" id="schedule-segmented">
+                        <div class="segment-tab active" data-value="none">Disabled</div>
+                        <div class="segment-tab" data-value="hourly">Hourly</div>
+                        <div class="segment-tab" data-value="daily">Daily</div>
+                        <div class="segment-tab" data-value="weekly">Weekly</div>
+                        <div class="segment-tab" data-value="custom">Custom Cron</div>
+                    </div>
+                </div>
+
+                <div class="input-group hidden" id="custom-cron-group">
+                    <label for="custom-cron">Custom Cron Expression</label>
+                    <input type="text" id="custom-cron" placeholder="*/15 * * * * (e.g. every 15 mins)">
+                </div>
+
+                <div class="input-group" style="margin-top: 0.25rem;">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; user-select: none;">
+                        <input type="checkbox" id="toggle-advanced-opts" style="width: auto; cursor: pointer; accent-color: #a855f7;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">Show Advanced Crawl Options (Proxies, Scrolling, Categories)</span>
+                    </label>
+                </div>
+
+                <div class="advanced-panel hidden" id="advanced-panel" style="display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 0.5rem; margin-top: 0.25rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="opt-use-proxy" style="width: auto; cursor: pointer; accent-color: #a855f7;">
+                        <label for="opt-use-proxy" style="cursor: pointer; font-size: 0.85rem; color: var(--text-primary);">Use Apify Proxy rotation</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="opt-crawl-links" style="width: auto; cursor: pointer; accent-color: #a855f7;">
+                        <label for="opt-crawl-links" style="cursor: pointer; font-size: 0.85rem; color: var(--text-primary);">Crawl product pages on listings/categories</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <label for="opt-max-scrolls" style="font-size: 0.85rem; color: var(--text-primary);">Max Infinite Scroll actions:</label>
+                        <input type="number" id="opt-max-scrolls" min="0" max="25" value="0" style="padding: 0.4rem; font-size: 0.85rem; width: 75px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.25rem; color: #fff; outline: none;">
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button id="btn-save-config" class="btn btn-secondary">
+                        Save Schedule Config
+                    </button>
+                    <button id="btn-run-scraper" class="btn btn-primary">
+                        <svg class="spinner hidden" id="run-spinner" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2" stroke-dasharray="25 15"></circle>
+                        </svg>
+                        <span id="run-text">Run Tracker Now</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Side: Status & Downloads -->
+            <section class="card status-card animate-fade-in delay-2">
+                <h2>Job Status & Data Export</h2>
+                
+                <div class="status-indicator">
+                    <div class="status-header">
+                        <span class="status-label">Current State:</span>
+                        <span id="job-status" class="badge badge-idle">Idle</span>
+                    </div>
+                    <div class="status-details">
+                        <p><strong>Started At:</strong> <span id="job-start-time">N/A</span></p>
+                        <p><strong>Completed At:</strong> <span id="job-end-time">N/A</span></p>
+                    </div>
+                </div>
+
+                <div class="export-area">
+                    <h3>Download Datasets</h3>
+                    <div class="export-buttons">
+                        <!-- JSON Download Link -->
+                        <a href="/api/export/json" id="btn-export-json" class="export-btn export-json" download>
+                            <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <text x="6" y="18" font-size="6" font-family="Inter" font-weight="bold" fill="currentColor">JSON</text>
+                            </svg>
+                            <span>JSON</span>
+                        </a>
+
+                        <!-- CSV Download Link -->
+                        <a href="/api/export/csv" id="btn-export-csv" class="export-btn export-csv" download>
+                            <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <text x="8" y="18" font-size="6" font-family="Inter" font-weight="bold" fill="currentColor">CSV</text>
+                            </svg>
+                            <span>CSV</span>
+                        </a>
+
+                        <!-- XLSX Download Link -->
+                        <a href="/api/export/xlsx" id="btn-export-xlsx" class="export-btn export-xlsx" download>
+                            <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <text x="7" y="18" font-size="6" font-family="Inter" font-weight="bold" fill="currentColor">XLSX</text>
+                            </svg>
+                            <span>Excel</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom: Scraped Data Analytics & Table/Grid Preview -->
+        <section class="card table-card animate-fade-in delay-3">
+            <div class="table-header">
+                <div class="table-header-top">
+                    <h2>Tracked Products Preview</h2>
+                    <span id="item-count" class="item-count">0 products tracked</span>
+                </div>
+                
+                <!-- Advanced Search, Filtering and View Controls -->
+                <div class="table-header-controls">
+                    <div class="search-bar-container">
+                        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="search-input" class="search-input" placeholder="Search by product name...">
+                    </div>
+                    
+                    <div class="filter-chips" id="filter-chips">
+                        <div class="filter-chip active" data-filter="all">All</div>
+                        <div class="filter-chip" data-filter="instock">In Stock</div>
+                        <div class="filter-chip" data-filter="outstock">Out of Stock</div>
+                        <div class="filter-chip" data-filter="error">Errors</div>
+                    </div>
+                    
+                    <div class="view-selector">
+                        <button class="view-btn active" id="view-btn-table" title="Table List View">
+                            <svg class="view-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <button class="view-btn" id="view-btn-grid" title="Grid Card View">
+                            <svg class="view-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scraper Analytics Summary Bar -->
+            <div class="metrics-bar" style="margin-top: 1rem; margin-bottom: 1rem;">
+                <div class="metric-box">
+                    <span class="metric-title">Total Found</span>
+                    <span class="metric-value" id="metric-total">0</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-title">In Stock</span>
+                    <span class="metric-value stock-in" id="metric-instock">0</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-title">Out of Stock</span>
+                    <span class="metric-value stock-out" id="metric-outstock">0</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-title">Avg Price</span>
+                    <span class="metric-value" id="metric-avgprice">N/A</span>
+                </div>
+            </div>
+
+            <!-- 1. Table View Container -->
+            <div class="table-wrapper" id="table-view-container">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Target URL</th>
+                            <th>Extracted Price</th>
+                            <th>Availability</th>
+                            <th>Last Scraped At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody">
+                        <tr>
+                            <td colspan="5" class="empty-state">No products scraped yet. Enter URLs and click "Run Tracker Now" above.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 2. Grid Cards View Container -->
+            <div class="grid-wrapper hidden" id="grid-view-container"></div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer animate-fade-in delay-4">
+            <p>E-commerce Price Tracker | Fully compatible local runner & Apify Actor</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
