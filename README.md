@@ -59,13 +59,17 @@ Users can:
 
 ### 1) Volcanic Dark Dashboard View
 
-![Dashboard View](scratch/dashboard_screenshot.png)
+![Dashboard View](screenshots/01-dashboard.png)
+
+<br/>
+
+### 2) Tracked Products View
+
+![Tracked Products View](screenshots/02-tracked-products.png)
 
 </div>
 
 ---
-
-## ✨ Features
 
 | Feature | Description |
 |---|---|
@@ -75,6 +79,8 @@ Users can:
 | 🛡️ **Proxy Rotation** | Integrated proxy rotation support to prevent IP blocking and rate limits |
 | 📊 **Dynamic Metrics** | Live panel computing average catalog prices, in-stock counts, and total products |
 | 🎛️ **Dual View Layout** | Toggle layout view presentation between a tabular data list and interactive cards |
+| 💾 **Scrape Run History** | Persists execution results to disk so users can review past datasets |
+| 🧹 **New Search Reset** | Reset configuration forms, dashboard counters, and database status immediately |
 | 📅 **Cron Automations** | Node-cron scheduling frequencies (Hourly, Daily, Weekly, or Custom Cron patterns) |
 | 📥 **Multi-Format Exports** | Real-time backend sheet exporter producing clean CSV, JSON, and Microsoft Excel sheets |
 | 🚀 **Dual Run Target** | Runs locally as a standalone Web Service or on the Apify Cloud Platform as a Batch Actor |
@@ -144,8 +150,13 @@ ecommerce-price-tracker/
 │   ├── scraper.js                 # Crawlee/Playwright engine with scroll & parsing
 │   └── server.js                  # Express API Router, exports, and cron scheduler
 │
+├── screenshots/
+│   ├── 01-dashboard.png           # Dashboard configuration view screenshot
+│   └── 02-tracked-products.png    # Tracked product results grid view screenshot
+│
 ├── storage/                       # Local database stores (gitignored)
 │   ├── config.json                # Local persistent configurations
+│   ├── history/                   # Persistent scraping history records
 │   └── datasets/                  # Scraped items dataset runs
 │
 ├── apify.json                     # Apify Platform integration configuration
@@ -197,6 +208,9 @@ Dashboard Access: `http://localhost:3000`
 | `POST` | `/api/config` | Save scheduling and advanced options configurations |
 | `POST` | `/api/scrape` | Trigger manual scraping run immediately |
 | `GET` | `/api/status` | Fetch running job state and scraped dataset results |
+| `POST` | `/api/clear` | Reset active job state to idle |
+| `GET` | `/api/history` | Get list of historical run metadata |
+| `GET` | `/api/history/:id` | Retrieve detailed scraped products from a past run |
 | `GET` | `/api/export/json` | Export results dataset as JSON |
 | `GET` | `/api/export/csv` | Export results dataset as CSV |
 | `GET` | `/api/export/xlsx` | Export results dataset as Microsoft Excel Spreadsheet |

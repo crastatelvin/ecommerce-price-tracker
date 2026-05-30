@@ -16,10 +16,57 @@ const PORT = process.env.PORT || 3000;
 // Ensure local storage folders exist
 const STORAGE_DIR = path.join(__dirname, '../storage');
 const CONFIG_FILE = path.join(STORAGE_DIR, 'config.json');
+const HISTORY_DIR = path.join(STORAGE_DIR, 'history');
 
 if (!fs.existsSync(STORAGE_DIR)) {
     fs.mkdirSync(STORAGE_DIR, { recursive: true });
 }
+if (!fs.existsSync(HISTORY_DIR)) {
+    fs.mkdirSync(HISTORY_DIR, { recursive: true });
+}
+
+// History saving helper
+const saveToHistory = async (results, urls) => {
+    try {
+        const id = `run_${Date.now()}`;
+        const detailFile = path.join(HISTORY_DIR, `${id}.json`);
+        fs.writeFileSync(detailFile, JSON.stringify(results, null, 2), 'utf-8');
+
+        const indexFile = path.join(HISTORY_DIR, 'index.json');
+        let index = [];
+        if (fs.existsSync(indexFile)) {
+            try {
+                index = JSON.parse(fs.readFileSync(indexFile, 'utf-8'));
+            } catch (err) {
+                console.error('[History] Error reading index:', err);
+            }
+        }
+
+        index.unshift({
+            id,
+            timestamp: new Date().toISOString(),
+            urls,
+            itemCount: results.length
+        });
+
+        // Limit to 20 entries to prevent disk bloat
+        if (index.length > 20) {
+            const removed = index.slice(20);
+            index = index.slice(0, 20);
+            for (const item of removed) {
+                const fileToDelete = path.join(HISTORY_DIR, `${item.id}.json`);
+                if (fs.existsSync(fileToDelete)) {
+                    fs.unlinkSync(fileToDelete);
+                }
+            }
+        }
+
+        fs.writeFileSync(indexFile, JSON.stringify(index, null, 2), 'utf-8');
+        console.log(`[History] Saved run ${id} with ${results.length} items.`);
+    } catch (err) {
+        console.error('[History] Error saving history run:', err);
+    }
+};
 
 // Default config including advanced options
 let config = {
@@ -113,6 +160,7 @@ const initScheduler = () => {
                 currentJob.results = results;
                 currentJob.completedAt = new Date().toISOString();
                 console.log(`[Scheduler] Scheduled scrape job finished successfully. Found ${results.length} items.`);
+                await saveToHistory(results, config.urls);
             } catch (err) {
                 currentJob.status = 'error';
                 currentJob.error = err.message;
@@ -175,6 +223,7 @@ app.post('/api/scrape', async (req, res) => {
         currentJob.status = 'completed';
         currentJob.results = results;
         currentJob.completedAt = new Date().toISOString();
+        await saveToHistory(results, urls);
     } catch (err) {
         currentJob.status = 'error';
         currentJob.error = err.message;
@@ -186,6 +235,47 @@ app.post('/api/scrape', async (req, res) => {
 // 2. Get Job Status
 app.get('/api/status', (req, res) => {
     res.json(currentJob);
+});
+
+// 2b. Clear Current Job Status (Reset dashboard state)
+app.post('/api/clear', (req, res) => {
+    currentJob = {
+        status: 'idle',
+        results: [],
+        error: null,
+        startedAt: null,
+        completedAt: null
+    };
+    res.json({ message: 'Scraper state cleared.', job: currentJob });
+});
+
+// 2c. Get Scrape Run History
+app.get('/api/history', (req, res) => {
+    const indexFile = path.join(HISTORY_DIR, 'index.json');
+    if (!fs.existsSync(indexFile)) {
+        return res.json([]);
+    }
+    try {
+        const index = JSON.parse(fs.readFileSync(indexFile, 'utf-8'));
+        res.json(index);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load history list.' });
+    }
+});
+
+// 2d. Get Specific Historical Scrape Run results
+app.get('/api/history/:id', (req, res) => {
+    const { id } = req.params;
+    const detailFile = path.join(HISTORY_DIR, `${id}.json`);
+    if (!fs.existsSync(detailFile)) {
+        return res.status(404).json({ error: 'History record not found.' });
+    }
+    try {
+        const detail = JSON.parse(fs.readFileSync(detailFile, 'utf-8'));
+        res.json(detail);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load historical results details.' });
+    }
 });
 
 // 3. Get Configuration

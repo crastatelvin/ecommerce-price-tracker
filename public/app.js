@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const optMaxScrolls = document.getElementById('opt-max-scrolls');
     
     const btnSaveConfig = document.getElementById('btn-save-config');
+    const btnClear = document.getElementById('btn-clear');
     const btnRunScraper = document.getElementById('btn-run-scraper');
     const runSpinner = document.getElementById('run-spinner');
     const runText = document.getElementById('run-text');
@@ -289,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderResults();
                     clearInterval(pollInterval);
                     pollInterval = null;
+                    loadHistoryList();
                 }
             })
             .catch(err => {
@@ -302,6 +304,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(pollStatus, 2000);
         pollStatus();
+    };
+
+    // Load History Options dropdown List helper
+    const loadHistoryList = () => {
+        fetch('/api/history')
+            .then(res => res.json())
+            .then(history => {
+                const historySelect = document.getElementById('history-select');
+                if (!historySelect) return;
+                historySelect.innerHTML = '<option value="current">Active Run (Live)</option>';
+                history.forEach(run => {
+                    const date = new Date(run.timestamp);
+                    const dateString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' - ' + date.toLocaleDateString();
+                    const label = `${dateString} (${run.itemCount} items)`;
+                    const option = document.createElement('option');
+                    option.value = run.id;
+                    option.textContent = label;
+                    historySelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error('[App] Error loading history:', err));
     };
 
     // 1. Initial configuration load from server
@@ -355,6 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (job.status === 'running') {
                 startPolling();
             }
+            loadHistoryList();
         })
         .catch(err => console.error('[App] Error loading initial configuration:', err));
 
@@ -439,4 +463,74 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStatusUI('error', null, new Date().toISOString());
         });
     });
+
+    // 4. History Selector dropdown change event listener
+    const historySelect = document.getElementById('history-select');
+    if (historySelect) {
+        historySelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val === 'current') {
+                btnRunScraper.disabled = false;
+                fetch('/api/status')
+                    .then(res => res.json())
+                    .then(job => {
+                        updateStatusUI(job.status, job.startedAt, job.completedAt);
+                        allResults = job.results || [];
+                        renderResults();
+                        if (job.status === 'running') {
+                            startPolling();
+                        }
+                    });
+            } else {
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                }
+                fetch(`/api/history/${val}`)
+                    .then(res => res.json())
+                    .then(results => {
+                        allResults = results;
+                        renderResults();
+                        
+                        jobStatusBadge.textContent = 'Archive';
+                        jobStatusBadge.className = 'badge badge-completed';
+                        btnRunScraper.disabled = true;
+                        runText.textContent = 'Viewing Archive';
+                    })
+                    .catch(err => {
+                        alert('Error loading archived results: ' + err.message);
+                    });
+            }
+        });
+    }
+
+    // 5. Clear Search parameters (New Search Button)
+    if (btnClear) {
+        btnClear.addEventListener('click', () => {
+            urlInputs.value = '';
+            searchInput.value = '';
+            searchQuery = '';
+            activeFilter = 'all';
+            filterChips.forEach(c => c.classList.remove('active'));
+            const defaultChip = document.querySelector('.filter-chip[data-filter="all"]');
+            if (defaultChip) defaultChip.classList.add('active');
+            
+            optUseProxy.checked = false;
+            optCrawlLinks.checked = false;
+            optMaxScrolls.value = 0;
+            
+            allResults = [];
+            renderResults();
+            
+            fetch('/api/clear', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    updateStatusUI('idle', null, null);
+                    if (historySelect) historySelect.value = 'current';
+                    btnRunScraper.disabled = false;
+                    runText.textContent = 'Run Tracker';
+                })
+                .catch(err => console.error('[App] Error resetting server state:', err));
+        });
+    }
 });
