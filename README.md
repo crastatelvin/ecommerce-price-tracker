@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="public/images/price-tracker-logo.png" alt="E-Commerce Price Tracker logo" width="180"/>
+
 # 👁️ E-COMMERCE PRICE TRACKER
 
 ### Product Scraper Engine — Multimodal Price Intelligence With Glassmorphism UI
